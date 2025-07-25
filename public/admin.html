@@ -2,30 +2,49 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>لوحة الإدارة</title>
+  <title>لوحة الإدارة - طلبات مهاب</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <h2>لوحة عرض الطلبات</h2>
+
+  <button onclick="fetchOrders()" style="margin-bottom: 15px; background-color: #27ae60; color: white; padding: 8px 16px; border: none; cursor: pointer;">
+    تحديث الطلبات
+  </button>
+
   <ul id="ordersList"></ul>
 
   <script>
     async function fetchOrders() {
-      const res = await fetch("/api/orders");
-      const orders = await res.json();
-      const list = document.getElementById("ordersList");
-      list.innerHTML = "";
-      orders.forEach((order, index) => {
-        const li = document.createElement("li");
-        li.innerHTML = `
-          <strong>طلب ${index + 1}</strong><br>
-          الجوال: ${order.customerPhone}<br>
-          الصنف: ${order.items[0].name}<br>
-          السعر: ${order.total} ريال<br>
-          الحالة: ${order.status}<br>
-          —————————————
-        `;
-        list.appendChild(li);
-      });
+      try {
+        const res = await fetch("/api/orders");
+        const orders = await res.json();
+        console.log("جميع الطلبات:", orders);
+        const list = document.getElementById("ordersList");
+        list.innerHTML = "";
+
+        if (orders.length === 0) {
+          list.innerHTML = "<li>لا توجد طلبات حالياً</li>";
+          return;
+        }
+
+        orders.forEach((order, index) => {
+          const li = document.createElement("li");
+          li.innerHTML = `
+            <strong>طلب ${index + 1}</strong><br>
+            رقم الجوال: ${order.customerPhone || "غير معروف"}<br>
+            الصنف: ${order.items?.[0]?.name || "غير محدد"}<br>
+            السعر: ${order.total || 0} ريال<br>
+            الحالة: ${order.status || "بدون حالة"}<br>
+            ملاحظات: ${order.notes || "-"}<br>
+            —————————————
+          `;
+          list.appendChild(li);
+        });
+      } catch (err) {
+        console.error("خطأ في جلب الطلبات:", err);
+        document.getElementById("ordersList").innerHTML = "<li>تعذر تحميل الطلبات</li>";
+      }
     }
 
     fetchOrders();
