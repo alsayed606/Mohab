@@ -5,29 +5,56 @@ const path = require("path");
 app.use(express.json());
 app.use(express.static("public"));
 
-const orders = [];
+// Firebase Admin
+const admin = require("firebase-admin");
+const serviceAccount = require("./mohab-81c48-firebase-adminsdk-fbsvc-b657a569a1.json");
 
-app.post("/api/order", (req, res) => {
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+const db = admin.firestore();
+const ordersRef = db.collection("orders");
+
+// استقبال الطلب
+app.post("/api/order", async (req, res) => {
   const order = req.body;
   order.status = "قيد المراجعة";
   order.timestamp = new Date().toISOString();
-  orders.push(order);
-  console.log("طلب جديد:", order);
-  res.json({ message: "تم استلام الطلب", order });
+
+  try {
+    const docRef = await ordersRef.add(order);
+    res.json({ message: "تم استلام الطلب", id: docRef.id });
+  } catch (error) {
+    console.error("خطأ في الإضافة إلى Firestore:", error);
+    res.status(500).json({ error: "فشل تسجيل الطلب" });
+  }
 });
 
-app.get("/api/orders", (req, res) => {
-  res.json(orders);
+// عرض كل الطلبات
+app.get("/api/orders", async (req, res) => {
+  try {
+    const snapshot = await ordersRef.orderBy("timestamp", "desc").get();
+    const orders = [];
+    snapshot.forEach(doc => {
+      orders.push({ id: doc.id, ...doc.data() });
+    });
+    res.json(orders);
+  } catch (error) {
+    console.error("فشل جلب الطلبات:", error);
+    res.status(500).json({ error: "تعذر جلب الطلبات" });
+  }
 });
 
-app.post("/api/order/:id/status", (req, res) => {
+// تغيير الحالة
+app.post("/api/order/:id/status", async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
-  if (orders[id]) {
-    orders[id].status = status;
+  try {
+    await ordersRef.doc(id).update({ status });
     res.json({ message: "تم تحديث الحالة" });
-  } else {
-    res.status(404).json({ error: "الطلب غير موجود" });
+  } catch (error) {
+    res.status(500).json({ error: "فشل تحديث الحالة" });
   }
 });
 
