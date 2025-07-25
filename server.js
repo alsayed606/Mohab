@@ -7,7 +7,7 @@ app.use(express.static("public"));
 
 // Firebase Admin
 const admin = require("firebase-admin");
-const serviceAccount = require("./mohab-81c48-firebase-adminsdk-fbsvc-b657a569a1.json");
+const serviceAccount = require("./firebase-admin.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
